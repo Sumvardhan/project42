@@ -1,168 +1,161 @@
-var score =0;
-var gun,bluebubble,redbubble, bullet, backBoard;
+/*--------------------------------------------------------*/
+var PLAY = 1;
+var END = 0;
+var WIN = 2;
+var gameState = PLAY;
 
-var gunImg,bubbleImg, bulletImg, blastImg, backBoardImg;
+var trex, trex_running, trex_collided;
+var jungle, invisiblejungle;
 
-var redBubbleGroup, redBubbleGroup, bulletGroup;
+var obstaclesGroup, obstacle1;
 
-
-var life =3;
 var score=0;
-var gameState=1
+
+var gameOver, restart;
 
 function preload(){
-  gunImg = loadImage("gun1.png")
-  blastImg = loadImage("blast.png")
-  bulletImg = loadImage("bullet1.png")
-  blueBubbleImg = loadImage("waterBubble.png")
-  redBubbleImg = loadImage("redbubble.png")
-  backBoardImg= loadImage("back.jpg")
+  kangaroo_running =   loadAnimation("assets/kangaroo1.png","assets/kangaroo2.png","assets/kangaroo3.png");
+  kangaroo_collided = loadAnimation("assets/kangaroo1.png");
+  jungleImage = loadImage("assets/bg.png");
+  shrub1 = loadImage("assets/shrub1.png");
+  shrub2 = loadImage("assets/shrub2.png");
+  shrub3 = loadImage("assets/shrub3.png");
+  obstacle1 = loadImage("assets/stone.png");
+  gameOverImg = loadImage("assets/gameOver.png");
+  restartImg = loadImage("assets/restart.png");
+  jumpSound = loadSound("assets/jump.wav");
+  collidedSound = loadSound("assets/collided.wav");
 }
-function setup() {
-  createCanvas(800, 800);
 
-  backBoard= createSprite(50, width/2, 100,height);
-  backBoard.addImage(backBoardImg)
+function setup() {
+  createCanvas(800, 400);
+
+  jungle = createSprite(400,100,400,20);
+  jungle.addImage("jungle",jungleImage);
+  jungle.scale=0.3
+  jungle.x = width /2;
+
+  kangaroo = createSprite(50,200,20,50);
+  kangaroo.addAnimation("running", kangaroo_running);
+  kangaroo.addAnimation("collided", kangaroo_collided);
+  kangaroo.scale = 0.15;
+  kangaroo.setCollider("circle",0,0,300)
+
+  invisibleGround = createSprite(400,350,1600,10);
+  invisibleGround.visible = false;
   
-  gun= createSprite(100, height/2, 50,50);
-  gun.addImage(gunImg)
-  gun.scale=0.2
+  shrubsGroup = new Group();
+  obstaclesGroup = new Group();
   
-  bulletGroup = createGroup();   
-  blueBubbleGroup = createGroup();   
-  redBubbleGroup = createGroup();   
-  
-  heading= createElement("h1");
-  scoreboard= createElement("h1");
+  score = 0;
+
 }
 
 function draw() {
-  background("#BDA297");
+  background(255);
+
+  // kangaroo.x=camera.positionX-270;
+  // kangaroo.x=Camera.position.x-270;
+  kangaroo.x=camera.position.x-270;
+  // kangaroo.x=Camera.Position.X-270;
+   
+  if (gameState===PLAY){
+
+    jungle.velocityX=-3
+
+    if(jungle.x<100)
+    {
+       jungle.x=400
+    }
+   console.log(kangaroo.y)
+    if(keyDown("space")&& kangaroo.y>270) {
+      jumpSound.play();
+      kangaroo.velocityY = -16;
+    }
   
-  heading.html("Life: "+life)
-  heading.style('color:red'); 
-  heading.position(150,20)
+    kangaroo.velocityY = kangaroo.velocityY + 0.8
+    spawnShrubs();
+    spawnObstacles();
 
-  scoreboard.html("Score: "+score)
-  scoreboard.style('color:red'); 
-  scoreboard.position(width-200,20)
-
-  if(gameState===1){
-    gun.y=mouseY  
-
-    if (frameCount % 80 === 0) {
-      drawblueBubble();
-    }
-
-    if (frameCount % 100 === 0) {
-      drawredBubble();
-    }
-
-    if(keyDown("space")){
-      shootBullet();
-    }
-
-    if (blueBubbleGroup.collide(backBoard)){
-      handleGameover(blueBubbleGroup);
-    }
+    kangaroo.collide(invisibleGround);
     
-    if (redBubbleGroup.collide(backBoard)) {
-      handleGameover(redBubbleGroup);
+    if(obstaclesGroup.isTouching(kangaroo)){
+      collidedSound.play();
+      gameState = END;
     }
-    
-    /*if(blueBubbleGroup.(bulletGroup)){
-      handleBubbleCollision(blueBubbleGroup);
-    }*/
+    if(shrubsGroup.isTouching(kangaroo)){
 
-    if(blueBubbleGroup.collide(bulletGroup)){
-      handleBubbleCollision();
+      shrubsGroup.destroyEach();
     }
-    
-    /*if(blueBubbleGroup.collide()){
-      handleBubbleCollision(blueBubbleGroup);
-    }*/
-    
-    /*if(blueBubbleGroup.collide(bulletGroup)){
-      handleBubbleCollision(blueBubbleGroup);
-    }*/
-
-    if(redBubbleGroup.collide(bulletGroup)){
-      handleBubbleCollision(redBubbleGroup);
-    }
-
-    drawSprites();
   }
+  else if (gameState === END) {
     
+    kangaroo.velocityY = 0;
+    jungle.velocityX = 0;
+    obstaclesGroup.setVelocityXEach(0);
+    shrubsGroup.setVelocityXEach(0);
+
+    kangaroo.changeAnimation("collided",kangaroo_collided);
+    
+    obstaclesGroup.setLifetimeEach(-1);
+    shrubsGroup.setLifetimeEach(-1);
+    
+  }
+
   
+  drawSprites();
+
+
 }
 
-function drawblueBubble(){
-  bluebubble = createSprite(800,random(20,780),40,40);
-  bluebubble.addImage(blueBubbleImg);
-  bluebubble.scale = 0.1;
-  bluebubble.velocityX = -8;
-  bluebubble.lifetime = 400;
-  blueBubbleGroup.add(bluebubble);
-}
-function drawredBubble(){
-  redbubble = createSprite(800,random(20,780),40,40);
-  redbubble.addImage(redBubbleImg);
-  redbubble.scale = 0.1;
-  redbubble.velocityX = -8;
-  redbubble.lifetime = 400;
-  redBubbleGroup.add(redbubble);
-}
+function spawnShrubs() {
 
-function shootBullet(){
-  bullet= createSprite(150, width/2, 50,20)
-  bullet.y= gun.y-20
-  bullet.addImage(bulletImg)
-  bullet.scale=0.12
-  bullet.velocityX= 7
-  bulletGroup.add(bullet)
-}
+  if (frameCount % 150 === 0) {
 
-function handleBubbleCollision(bubbleGroup){
-    if (life > 0) {
-       score=score+1;
+    // var shrub = createSprite(camera.position+500,330,40,10);
+     var shrub = createSprite(camera.position.x+500,330,40,10);
+    // var shrub = createSprite(camera.positionX+500,330,40,10);
+    // var shrub = createSprite(Camera.position.x+500,330,40,10);
+
+    shrub.velocityX = -(6 + 3*score/100)
+    shrub.scale = 0.6;
+
+    var rand = Math.round(random(1,3));
+    switch(rand) {
+      case 1: shrub.addImage(shrub1);
+              break;
+      case 2: shrub.addImage(shrub2);
+              break;
+      case 3: shrub.addImage(shrub3);
+              break;
+      default: break;
     }
-
-     blast= createSprite(bullet.x+60, bullet.y, 50,50);
-    blast.addImage(blastImg) 
-
-    /* blast= sprite(bullet.x+60, bullet.y, 50,50);
-    blast.addImage(blastImg) */
-
-    /* blast= createSprite(bullet.x+60, bullet.y, 50,50);
-    blast.add(blastImg) */
-
-    /* blast= createSprite(bullet.x+60, bullet.y, 50,50);
-    image(blastImg) */
+         
+    shrub.scale = 0.05;
+    shrub.lifetime = 400;
     
-    blast.scale=0.3
-    blast.life=20
-    bulletGroup.destroyEach()
-    bubbleGroup.destroyEach()
+    shrub.setCollider("rectangle",0,0,shrub.width/2,shrub.height/2)
+    shrubsGroup.add(shrub);
+    
+  }
+  
 }
 
-function handleGameover(bubbleGroup){
-  
-    life=life-1;
-    bubbleGroup.destroyEach();
-    
+function spawnObstacles() {
+  if(frameCount % 120 === 0) {
 
-    if (life === 0) {
-      gameState=2
-      
-      swal({
-        title: `Game Over`,
-        text: "Oops you lost the game....!!!",
-        text: "Your Score is " + score,
-        imageUrl:
-          "https://cdn.shopify.com/s/files/1/1061/1924/products/Thumbs_Down_Sign_Emoji_Icon_ios10_grande.png",
-        imageSize: "100x100",
-        confirmButtonText: "Thanks For Playing"
-      });
-    }
-  
+    // var obstacle = createSprite(camera.Position.X+400,330,40,40);
+    // var obstacle = createSprite(Camera.Position.x+400,330,40,40);
+     var obstacle = createSprite(camera.position.x+400,330,40,40);
+    // var obstacle = createSprite(camera.position.x.400,330,40,40);
+
+    obstacle.setCollider("rectangle",0,0,200,200)
+    obstacle.addImage(obstacle1);
+    obstacle.velocityX = -(6 + 3*score/100)
+    obstacle.scale = 0.15;   
+ 
+    obstacle.lifetime = 400;
+    obstaclesGroup.add(obstacle);
+    
+  }
 }
